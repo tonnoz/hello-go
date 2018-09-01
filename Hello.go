@@ -1,10 +1,18 @@
 package main
 
 import (
-	"fmt"
-	"math"
 	"errors"
-) //import are automatic from IDE like Java Projects
+	"fmt"
+	"io/ioutil"
+	"log"
+	"math"
+	"net/http"
+	"os"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+) //import are automatic from Intellij
 
 func main(){
 
@@ -40,7 +48,7 @@ func main(){
 	fmt.Println(slice5)
 
 	newSlice := append(slice, 6,7,8,9,10) //append
-	fmt.Println(cap(slice)) //cap gets the max lenght of the slice
+	fmt.Println(cap(slice)) //cap gets the max length of the slice
 	/*
 	Attention: append will change the array that slice points to, and affect other slices that point to the same array.
 	Also, if there is not enough length for the slice ((cap-len) == 0), append returns a new array for this slice.
@@ -159,13 +167,112 @@ func main(){
 	fmt.Println("area rect", getArea(&rect))
 	fmt.Println("area circle", getArea(&circle))
 
-	//21: HTTP SERVER
+	//21: String manipulation
 
+	sampleString := "Hello World"
+	fmt.Println(strings.Contains(sampleString, "lo"))     //boolean in return
+	fmt.Println(strings.Index(sampleString, "lo"))        //integer in return (first occurrence)
+	fmt.Println(strings.Count(sampleString, "l"))         //integer in return (number of  occurrences)
+	fmt.Println(strings.Replace(sampleString, "l","x",3)) //replace all l with x (only first 3 occurrences)
+	csvString := "1,2,3,4,5,6"
+	fmt.Println(strings.Split(csvString, ",")) //return a list (or array?)
+
+	listOfLetters :=[]string{"c","b","d","a"}
+	sort.Strings(listOfLetters)
+	fmt.Println("Letters: ", listOfLetters)
+
+	listOfNums := strings.Join([]string{"hello", "world"},"! ")
+	fmt.Println(listOfNums)
+
+
+	//22: files IO
+	//writing
+	file,err := os.Create("sample.txt")
+	if err!=nil{log.Fatal(err)}
+	file.WriteString("Hello World!")
+	file.Close()
+
+	//reading
+	stream, err2 := ioutil.ReadFile("sample.txt")
+	if err2!=nil{log.Fatal(err)}
+	readString := string(stream)
+	fmt.Println(readString)
+
+	//23: numbers conversion
+	randInt:=5
+	randFloat:=10.5
+	randString:="100"
+	randString2:="250.2"
+
+	fmt.Println(float64(randInt))
+	fmt.Println(int(randFloat))
+	newInt, _ := strconv.ParseInt(randString, 0, 64)
+	fmt.Println(newInt)
+	newFloat, _ := strconv.ParseFloat(randString2, 64)
+	fmt.Println(newFloat)
+
+	//24: goroutines
+	for i:=0; i < 10; i++{
+		go count(i)
+	}
+	time.Sleep(time.Second *5)
+
+
+	//25: channels (pass data to go routines)
+	stringChan := make(chan string)
+	for i :=0; i<3; i++{
+		go makeDough(stringChan)
+		go addSauce(stringChan)
+		go addToppings(stringChan)
+		time.Sleep(time.Millisecond*500)
+	}
+	time.Sleep(time.Second * 8)
+
+	//26: HTTP WEB SERVER!
+	http.HandleFunc("/", handler)
+	http.HandleFunc("/earth", handler2)
+	http.ListenAndServe(":8080", nil)
 
 
 }
 
+var pizzaNum = 0
+var pizzaName = ""
 
+func makeDough(stringChannel chan string){
+	pizzaNum++
+	pizzaName = "pizza #"+strconv.Itoa(pizzaNum)
+	fmt.Println("Make Dough for ", pizzaName, "and Send for Sauce")
+	stringChannel <- pizzaName //send value to the channel
+	time.Sleep(time.Millisecond * 10)
+}
+
+func addSauce(stringChannel chan string){
+	pizza:= <- stringChannel
+	fmt.Println("Add Sauce and Send ", pizza, " for toppings")
+	stringChannel <- pizzaName //send value to the channel
+	time.Sleep(time.Millisecond * 10)
+}
+
+func addToppings(stringChannel chan string){
+	pizza:= <- stringChannel
+	fmt.Println("Add toppings to ", pizza, " and ship")
+	time.Sleep(time.Millisecond * 10)
+}
+
+func count(id int){
+	for i:=0; i < 10; i++{
+		fmt.Println("routine ID: ", id, ":", "Value: ", i)
+		time.Sleep(time.Millisecond * 300)
+	}
+}
+
+func handler(w http.ResponseWriter, r *http.Request){
+	fmt.Fprintf(w,"Hello Go!\n")
+}
+func handler2(w http.ResponseWriter, r *http.Request){
+	fmt.Fprintf(w,"Hello Earth!\n")
+}
 
 
 func changeValueOfPointer(anIntPointer *int) {
@@ -211,7 +318,6 @@ func addThem(args ...int) int{
 func printOne(){fmt.Println(1)}
 func printTwo(){fmt.Println(2)}
 
-
 //this function will execute the division but if an error will occur (eg num/0) then the program wont terminate because of recover
 func saveDivision(num1,num2 int) int{
 	defer func(){ //defer closure
@@ -221,8 +327,7 @@ func saveDivision(num1,num2 int) int{
 	return solution
 }
 
-
-//panic is a sort of throws exception: interrupt normal flow, call the defer if present and then quit the function
+//panic is a sort of throw exception: interrupt normal flow, call the defer if present and then quit the function
 func testPanic(){
 	defer func(){
 		fmt.Println(recover())
@@ -234,7 +339,6 @@ type Shape interface {
 	area() float64
 }
 
-
 type Rectangle struct{
 	height float64
 	width float64
@@ -245,7 +349,6 @@ type Circle struct {
 	radius float64
 }
 
-
 func getArea(shape Shape) float64{
 	return shape.area()
 }
@@ -253,7 +356,6 @@ func getArea(shape Shape) float64{
 func (rect *Rectangle) area() float64 { //method: a function attached to a type
 	return rect.height * rect.width
 }
-
 
 func (c *Circle) area() float64 {  //method: a function attached to a type
 	return math.Pow(c.radius,2) * math.Pi
